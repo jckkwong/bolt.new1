@@ -62,24 +62,18 @@ export class DocumentLoader {
 
     try {
       // Process documents in parallel for faster loading
-      const documentPromises = documentFiles.map((filename) => {
-        return (async () => {
-          try {
-            console.log(`Loading document: ${filename}`);
-            const content = await this.loadDocumentContent(filename);
-            console.log(`Content loaded for ${filename}, length: ${content.length}`);
-            const document = await this.processDocument(filename, content);
-            console.log(`Document processed: ${filename}, chunks: ${document.chunks}`);
-            return document;
-          } catch (error) {
-            console.error(`Failed to load document ${filename}:`, error);
-            return null;
-          }
-        })().catch((error) => {
-          // Additional catch to ensure no promise rejection escapes
-          console.error(`Unexpected error loading document ${filename}:`, error);
+      const documentPromises = documentFiles.map(async (filename) => {
+        try {
+          console.log(`Loading document: ${filename}`);
+          const content = await this.loadDocumentContent(filename);
+          console.log(`Content loaded for ${filename}, length: ${content.length}`);
+          const document = await this.processDocument(filename, content);
+          console.log(`Document processed: ${filename}, chunks: ${document.chunks}`);
+          return document;
+        } catch (error) {
+          console.error(`Failed to load document ${filename}:`, error);
           return null;
-        });
+        }
       });
 
       const results = await Promise.all(documentPromises);
@@ -139,37 +133,18 @@ export class DocumentLoader {
     console.log(`Processing ${filename} as ${extension} file`);
     
     if (extension === 'docx') {
-      // Handle Word documents with better error handling
-      try {
-        const arrayBuffer = await response.arrayBuffer();
-        console.log(`Extracting text from ${filename}, size: ${arrayBuffer.byteLength} bytes`);
-        
-        if (arrayBuffer.byteLength === 0) {
-          throw new Error(`Document ${filename} is empty`);
-        }
-        
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        console.log(`Extracted ${result.value.length} characters from ${filename}`);
-        
-        if (!result.value || result.value.trim().length === 0) {
-          throw new Error(`Document ${filename} contains no extractable text`);
-        }
-        
-        return result.value;
-      } catch (error) {
-        console.error(`Error processing DOCX ${filename}:`, error);
-        throw new Error(`Failed to extract text from DOCX ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+      // Handle Word documents
+      const arrayBuffer = await response.arrayBuffer();
+      console.log(`Extracting text from ${filename}, size: ${arrayBuffer.byteLength} bytes`);
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      console.log(`Extracted ${result.value.length} characters from ${filename}`);
+      return result.value;
     } else if (extension === 'pdf') {
-      // Handle PDF documents with better error handling
+      // Handle PDF documents
+      const arrayBuffer = await response.arrayBuffer();
+      console.log(`Extracting text from PDF ${filename}, size: ${arrayBuffer.byteLength} bytes`);
+      
       try {
-        const arrayBuffer = await response.arrayBuffer();
-        console.log(`Extracting text from PDF ${filename}, size: ${arrayBuffer.byteLength} bytes`);
-        
-        if (arrayBuffer.byteLength === 0) {
-          throw new Error(`PDF ${filename} is empty`);
-        }
-        
         const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
         let text = '';
         
@@ -195,19 +170,9 @@ export class DocumentLoader {
       }
     } else {
       // Handle text files
-      try {
-        const text = await response.text();
-        console.log(`Loaded ${text.length} characters from ${filename}`);
-        
-        if (!text || text.trim().length === 0) {
-          throw new Error(`Text file ${filename} is empty`);
-        }
-        
-        return text;
-      } catch (error) {
-        console.error(`Error loading text file ${filename}:`, error);
-        throw new Error(`Failed to load text file ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+      const text = await response.text();
+      console.log(`Loaded ${text.length} characters from ${filename}`);
+      return text;
     }
   }
 
