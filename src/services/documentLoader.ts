@@ -36,7 +36,9 @@ export class DocumentLoader {
       console.warn('Failed to load manifest, using fallback list:', error);
       // Fallback to predefined list if manifest doesn't exist
       documentFiles = [
+        'Claude.docx',
         'DeepSeek.docx',
+        'Combined using Claude.docx',
         'GPT.docx',
         'Gemini.docx'
       ];
